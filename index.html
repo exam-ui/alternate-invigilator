@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alternate Invigilator — Request Form</title>
+<style>
+  :root{
+    --maroon:#a4243b;
+    --green:#1a6b2c;
+    --ink:#1f2430;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --bg:#ffffff;
+    --accent-bg:#fbf7f4;
+    --ok:#1a6b2c;
+    --err:#b3261e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--accent-bg);
+    color:var(--ink);
+  }
+  .wrap{max-width:520px; margin:0 auto; background:var(--bg); min-height:100vh;
+        box-shadow:0 0 24px rgba(0,0,0,0.06);}
+  header{ text-align:center; padding:22px 20px 14px; border-bottom:1px solid var(--line);}
+  header h1{ font-size:19px; color:var(--maroon); margin:0 0 14px; font-weight:700;}
+  .brand{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:6px;}
+  .brand-text .sanstha{ color:var(--green); font-size:13px; margin:0; font-weight:600;}
+  .brand-text .college{ color:var(--maroon); font-size:17px; margin:2px 0; font-weight:800;}
+  .exam-title{ font-size:13px; color:var(--ink); font-weight:700; margin:4px 0 0;}
+  .notice{ font-size:12.5px; color:var(--maroon); background:#fff7f2; border:1px solid #f3ddd0;
+           border-radius:8px; padding:10px 12px; margin:14px 18px 0; line-height:1.5;}
+
+  form{padding:6px 18px 40px;}
+  .field{ padding:18px 0; border-bottom:1px solid var(--line);}
+  label{ display:block; font-size:13.5px; font-weight:700; color:var(--maroon); margin-bottom:8px;}
+  label .req{color:var(--err);}
+  select, input[type="text"], input[type="date"]{
+    width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:14.5px; background:#fafafa; color:var(--ink);
+  }
+  select:focus, input:focus{ outline:2px solid var(--maroon); outline-offset:1px; background:#fff;}
+  .hint{font-size:11.5px; color:var(--muted); margin-top:6px;}
+  .checks{display:flex; flex-direction:column; gap:10px;}
+  .checks label{ display:flex; align-items:center; gap:10px; font-weight:500; color:var(--ink);
+                 font-size:14.5px; margin:0;}
+  .checks input{ width:18px; height:18px;}
+
+  canvas.sig{ width:100%; height:140px; border:1px solid var(--line); border-radius:8px;
+              background:#fafafa; touch-action:none; display:block;}
+  .sig-actions{display:flex; justify-content:flex-end; margin-top:6px;}
+  .clear-link{ font-size:12.5px; color:var(--green); background:none; border:none; padding:0;
+               cursor:pointer; text-decoration:underline;}
+
+  .submit-bar{ padding:22px 0 4px;}
+  button.submit{
+    width:100%; padding:14px; border:none; border-radius:10px; background:var(--maroon);
+    color:#fff; font-size:15.5px; font-weight:700; cursor:pointer;
+  }
+  button.submit:disabled{ background:#c9a3ac; cursor:not-allowed;}
+  .status{ margin-top:14px; padding:12px 14px; border-radius:8px; font-size:13.5px; display:none;}
+  .status.ok{ display:block; background:#eaf6ec; color:var(--ok); border:1px solid #c3e6c8;}
+  .status.err{ display:block; background:#fdecea; color:var(--err); border:1px solid #f3c2be;}
+  .req-id{font-weight:700;}
+  footer{ text-align:center; font-size:11px; color:var(--muted); padding:0 18px 24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Alternate Invigilator</h1>
+    <div class="brand">
+      <div class="brand-text">
+        <p class="sanstha">Shri Shivaji Shikshan Sanstha, Amravati Sanchalit</p>
+        <p class="college">Dr. Panjabrao Deshmukh Polytechnic, Amravati</p>
+      </div>
+    </div>
+    <p class="exam-title">MSBTE Exam Summer-2026 — Alternate Invigilation Entry</p>
+  </header>
+
+  <p class="notice">
+    Invigilators assigned for the theory examination who are unable to attend on the
+    scheduled date must arrange a replacement in advance. Please submit this request
+    at least one day prior — changes will not be accepted over phone.
+  </p>
+
+  <form id="reqForm">
+    <div class="field">
+      <label for="invigilatorName">Name of Invigilator <span class="req">*</span></label>
+      <select id="invigilatorName" required>
+        <option value="">Select Teacher Name</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="date">Date of Invigilation <span class="req">*</span></label>
+      <input type="date" id="date" required>
+    </div>
+
+    <div class="field">
+      <label>Time of Invigilation <span class="req">*</span></label>
+      <div class="checks">
+        <label><input type="checkbox" name="slot" value="9:30 to 12:30"> 9:30 to 12:30</label>
+        <label><input type="checkbox" name="slot" value="2:00 to 5:00"> 2:00 to 5:00</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Signature of Invigilator <span class="req">*</span></label>
+      <canvas id="sig1" class="sig"></canvas>
+      <div class="sig-actions"><button type="button" class="clear-link" data-target="sig1">Clear</button></div>
+    </div>
+
+    <div class="field">
+      <label for="alternateName">Alternate Invigilator <span class="req">*</span></label>
+      <select id="alternateName" required>
+        <option value="">-Select-</option>
+      </select>
+      <p class="hint">Name of alternate invigilator</p>
+    </div>
+
+    <div class="field">
+      <label>Signature of Alternate Invigilator <span class="req">*</span></label>
+      <canvas id="sig2" class="sig"></canvas>
+      <div class="sig-actions"><button type="button" class="clear-link" data-target="sig2">Clear</button></div>
+    </div>
+
+    <div class="submit-bar">
+      <button type="submit" class="submit" id="submitBtn">Submit Request</button>
+      <div class="status" id="status"></div>
+    </div>
+  </form>
+
+  <footer>Requests are reviewed by the exam admin. You'll receive an email once your request is approved or rejected.</footer>
+</div>
+
+<script src="config.js"></script>
+<script>
+  // ---------- Signature pad ----------
+  function setupSignaturePad(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    function resize(){
+      const ratio = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      ctx.scale(ratio, ratio);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#1f2430';
+    }
+    resize();
+    let drawing = false, hasInk = false;
+    function pos(e){
+      const rect = canvas.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+    }
+    function start(e){ drawing = true; hasInk = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+    function move(e){ if(!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
+    function end(){ drawing = false; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, {passive:false});
+    canvas.addEventListener('touchmove', move, {passive:false});
+    canvas.addEventListener('touchend', end);
+    return {
+      clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk = false; },
+      isEmpty(){ return !hasInk; },
+      dataURL(){ return canvas.toDataURL('image/png'); }
+    };
+  }
+  const pad1 = setupSignaturePad('sig1');
+  const pad2 = setupSignaturePad('sig2');
+  document.querySelectorAll('.clear-link').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      (btn.dataset.target === 'sig1' ? pad1 : pad2).clear();
+    });
+  });
+
+  // ---------- Load teacher list into both dropdowns ----------
+  const nameSelect = document.getElementById('invigilatorName');
+  const altSelect = document.getElementById('alternateName');
+
+  fetch(APPS_SCRIPT_URL + '?action=getTeachers')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      data.teachers.forEach(t => {
+        const o1 = document.createElement('option'); o1.value = t.name; o1.textContent = t.name;
+        nameSelect.appendChild(o1);
+        const o2 = document.createElement('option'); o2.value = t.name; o2.textContent = t.name;
+        altSelect.appendChild(o2);
+      });
+    })
+    .catch(()=>{ /* leave dropdowns with just the placeholder if offline */ });
+
+  // ---------- Submit ----------
+  const form = document.getElementById('reqForm');
+  const statusEl = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function showStatus(kind, html){
+    statusEl.className = 'status ' + kind;
+    statusEl.innerHTML = html;
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    statusEl.className = 'status';
+
+    const slots = Array.from(document.querySelectorAll('input[name="slot"]:checked')).map(x => x.value);
+    if (!nameSelect.value) return showStatus('err', 'Please select the name of invigilator.');
+    if (!document.getElementById('date').value) return showStatus('err', 'Please enter the date of invigilation.');
+    if (slots.length === 0) return showStatus('err', 'Please select at least one time slot.');
+    if (pad1.isEmpty()) return showStatus('err', 'Please sign as Invigilator.');
+    if (!altSelect.value) return showStatus('err', 'Please select the alternate invigilator.');
+    if (pad2.isEmpty()) return showStatus('err', 'Please sign as Alternate Invigilator.');
+    if (altSelect.value === nameSelect.value) return showStatus('err', 'Alternate invigilator must be a different person.');
+
+    const payload = {
+      action: 'submitRequest',
+      invigilatorName: nameSelect.value,
+      date: document.getElementById('date').value,
+      timeSlot: slots.join(', '),
+      invigilatorSignature: pad1.dataURL(),
+      alternateName: altSelect.value,
+      alternateSignature: pad2.dataURL()
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+      .then(r => r.json())
+      .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Request';
+        if (data.ok) {
+          showStatus('ok', 'Request submitted — reference <span class="req-id">#' + data.requestId +
+            '</span>. You will be notified by email once the admin approves it.');
+          form.reset();
+          pad1.clear(); pad2.clear();
+        } else {
+          showStatus('err', 'Could not submit: ' + (data.error || 'unknown error'));
+        }
+      })
+      .catch(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Request';
+        showStatus('err', 'Network error — please check your connection and try again.');
+      });
+  });
+</script>
+</body>
+</html>

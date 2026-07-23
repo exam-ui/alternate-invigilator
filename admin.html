@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Alternate Invigilator Requests</title>
+<style>
+  :root{ --maroon:#a4243b; --green:#1a6b2c; --ink:#1f2430; --muted:#6b7280;
+         --line:#e5e7eb; --bg:#fff; --pending:#b8860b; --approved:#1a6b2c; --rejected:#b3261e; }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+        background:#f7f5f3; color:var(--ink);}
+  .wrap{max-width:760px; margin:0 auto; padding:20px 16px 60px;}
+  h1{ font-size:20px; color:var(--maroon); margin:0 0 4px;}
+  .sub{ font-size:13px; color:var(--muted); margin:0 0 20px;}
+
+  #loginBox{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:20px; max-width:360px;}
+  #loginBox input{ width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font-size:14px; margin-bottom:10px;}
+  #loginBox button{ width:100%; padding:11px; border:none; border-radius:8px; background:var(--maroon); color:#fff; font-weight:700; cursor:pointer;}
+  .err{ color:var(--rejected); font-size:13px; margin-top:8px;}
+
+  .toolbar{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .toolbar button{ padding:8px 14px; border-radius:20px; border:1px solid var(--line); background:#fff;
+                   font-size:13px; cursor:pointer; color:var(--ink);}
+  .toolbar button.active{ background:var(--maroon); color:#fff; border-color:var(--maroon);}
+
+  .card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px;}
+  .card .row{ display:flex; justify-content:space-between; gap:10px; font-size:14px; margin-bottom:6px;}
+  .card .row b{ color:var(--maroon);}
+  .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; color:#fff;}
+  .badge.Pending{ background:var(--pending);}
+  .badge.Approved{ background:var(--approved);}
+  .badge.Rejected{ background:var(--rejected);}
+  .sigs{ display:flex; gap:10px; margin:10px 0;}
+  .sigs div{ flex:1;}
+  .sigs img{ width:100%; border:1px solid var(--line); border-radius:6px; background:#fafafa;}
+  .sigs p{ font-size:11px; color:var(--muted); margin:4px 0 0; text-align:center;}
+  .actions{ display:flex; gap:8px; margin-top:12px;}
+  .actions button{ flex:1; padding:10px; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:13.5px;}
+  .approve{ background:var(--approved); color:#fff;}
+  .reject{ background:var(--rejected); color:#fff;}
+  .actions button:disabled{ opacity:0.5; cursor:not-allowed;}
+  .empty{ text-align:center; color:var(--muted); padding:40px 0; font-size:14px;}
+  .remarks{ width:100%; margin-top:8px; padding:8px; border:1px solid var(--line); border-radius:6px; font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Alternate Invigilator — Admin Dashboard</h1>
+  <p class="sub">Review and approve alternate invigilator requests. Decisions are emailed automatically.</p>
+
+  <div id="loginBox">
+    <input type="password" id="pw" placeholder="Admin password">
+    <button id="loginBtn">Sign in</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <div id="dashboard" style="display:none;">
+    <div class="toolbar" id="filterBar">
+      <button data-f="Pending" class="active">Pending</button>
+      <button data-f="Approved">Approved</button>
+      <button data-f="Rejected">Rejected</button>
+      <button data-f="All">All</button>
+      <button id="refreshBtn" style="margin-left:auto;">Refresh</button>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+  let adminPassword = '';
+  let allRequests = [];
+  let currentFilter = 'Pending';
+
+  const loginBtn = document.getElementById('loginBtn');
+  const pwInput = document.getElementById('pw');
+  const loginErr = document.getElementById('loginErr');
+
+  loginBtn.addEventListener('click', () => {
+    adminPassword = pwInput.value;
+    loadRequests(true);
+  });
+  pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginBtn.click(); });
+
+  function loadRequests(isLogin){
+    fetch(APPS_SCRIPT_URL + '?action=getRequests&password=' + encodeURIComponent(adminPassword))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) {
+          if (isLogin) loginErr.textContent = data.error || 'Login failed';
+          return;
+        }
+        loginErr.textContent = '';
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        allRequests = data.requests;
+        render();
+      })
+      .catch(() => { if (isLogin) loginErr.textContent = 'Network error'; });
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', () => loadRequests(false));
+  document.querySelectorAll('#filterBar button[data-f]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#filterBar button[data-f]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.f;
+      render();
+    });
+  });
+
+  function render(){
+    const list = document.getElementById('list');
+    const rows = allRequests.filter(r => currentFilter === 'All' || r.status === currentFilter);
+    if (rows.length === 0) {
+      list.innerHTML = '<div class="empty">No ' + currentFilter.toLowerCase() + ' requests.</div>';
+      return;
+    }
+    list.innerHTML = rows.map(r => `
+      <div class="card" data-row="${r.rowIndex}">
+        <div class="row"><span>Request</span><span class="badge ${r.status}">${r.status}</span></div>
+        <div class="row"><span>Invigilator</span><b>${escapeHtml(r.invigilatorName)}</b></div>
+        <div class="row"><span>Alternate</span><b>${escapeHtml(r.alternateName)}</b></div>
+        <div class="row"><span>Date</span><span>${escapeHtml(String(r.date))}</span></div>
+        <div class="row"><span>Time Slot</span><span>${escapeHtml(r.timeSlot)}</span></div>
+        <div class="sigs">
+          <div><img src="${r.invigilatorSignature}"><p>Invigilator signature</p></div>
+          <div><img src="${r.alternateSignature}"><p>Alternate signature</p></div>
+        </div>
+        ${r.status === 'Pending' ? `
+          <input type="text" class="remarks" placeholder="Remarks (optional)">
+          <div class="actions">
+            <button class="approve" data-action="Approved">Approve</button>
+            <button class="reject" data-action="Rejected">Reject</button>
+          </div>
+        ` : `<div class="row"><span>Remarks</span><span>${escapeHtml(r.adminRemarks || '—')}</span></div>`}
+      </div>
+    `).join('');
+
+    list.querySelectorAll('.card').forEach(card => {
+      const rowIndex = card.dataset.row;
+      card.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => decide(rowIndex, btn.dataset.action, card));
+      });
+    });
+  }
+
+  function decide(rowIndex, decision, card){
+    const remarks = card.querySelector('.remarks') ? card.querySelector('.remarks').value : '';
+    card.querySelectorAll('button').forEach(b => b.disabled = true);
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'decide', rowIndex, decision, remarks, password: adminPassword })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) loadRequests(false);
+        else { alert('Error: ' + data.error); card.querySelectorAll('button').forEach(b => b.disabled = false); }
+      })
+      .catch(() => { alert('Network error'); card.querySelectorAll('button').forEach(b => b.disabled = false); });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>
