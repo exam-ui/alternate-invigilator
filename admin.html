@@ -62,6 +62,7 @@
       <button data-f="Rejected">Rejected</button>
       <button data-f="All">All</button>
       <button id="refreshBtn" style="margin-left:auto;">Refresh</button>
+      <button id="logoutBtn" style="color:#b3261e; border-color:#b3261e;">Sign out</button>
     </div>
     <div id="list"></div>
   </div>
@@ -83,14 +84,33 @@
   });
   pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginBtn.click(); });
 
+  // If we already signed in earlier this browser session, skip the login screen.
+  const savedPassword = sessionStorage.getItem('adminPassword');
+  if (savedPassword) {
+    adminPassword = savedPassword;
+    loadRequests(true);
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('adminPassword');
+    adminPassword = '';
+    allRequests = [];
+    pwInput.value = '';
+    loginErr.textContent = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loginBox').style.display = 'block';
+  });
+
   function loadRequests(isLogin){
     fetch(APPS_SCRIPT_URL + '?action=getRequests&password=' + encodeURIComponent(adminPassword))
       .then(r => r.json())
       .then(data => {
         if (!data.ok) {
+          sessionStorage.removeItem('adminPassword');
           if (isLogin) loginErr.textContent = data.error || 'Login failed';
           return;
         }
+        sessionStorage.setItem('adminPassword', adminPassword);
         loginErr.textContent = '';
         document.getElementById('loginBox').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
