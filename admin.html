@@ -24,6 +24,14 @@
                    font-size:13px; cursor:pointer; color:var(--ink);}
   .toolbar button.active{ background:var(--maroon); color:#fff; border-color:var(--maroon);}
 
+  .settings{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:16px;
+             display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .settings label{ font-size:13px; font-weight:700; color:var(--maroon);}
+  .settings input{ padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:13.5px; flex:1; min-width:140px;}
+  .settings button{ padding:8px 14px; border:none; border-radius:8px; background:var(--maroon); color:#fff;
+                     font-weight:700; cursor:pointer; font-size:13px;}
+  .settings .saved{ font-size:12px; color:var(--approved); display:none;}
+
   .card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px;}
   .card .row{ display:flex; justify-content:space-between; gap:10px; font-size:14px; margin-bottom:6px;}
   .card .row b{ color:var(--maroon);}
@@ -56,6 +64,12 @@
   </div>
 
   <div id="dashboard" style="display:none;">
+    <div class="settings">
+      <label for="examSessionInput">MSBTE Exam Session</label>
+      <input type="text" id="examSessionInput" placeholder="e.g. Summer-2026">
+      <button id="saveSessionBtn">Save</button>
+      <span class="saved" id="sessionSaved">Saved ✓</span>
+    </div>
     <div class="toolbar" id="filterBar">
       <button data-f="Pending" class="active">Pending</button>
       <button data-f="Approved">Approved</button>
@@ -116,9 +130,39 @@
         document.getElementById('dashboard').style.display = 'block';
         allRequests = data.requests;
         render();
+        loadExamSession();
       })
       .catch(() => { if (isLogin) loginErr.textContent = 'Network error'; });
   }
+
+  function loadExamSession(){
+    fetch(APPS_SCRIPT_URL + '?action=getConfig')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) document.getElementById('examSessionInput').value = data.examSession;
+      })
+      .catch(() => {});
+  }
+
+  document.getElementById('saveSessionBtn').addEventListener('click', () => {
+    const examSession = document.getElementById('examSessionInput').value.trim();
+    if (!examSession) return;
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'setExamSession', examSession, password: adminPassword })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          const saved = document.getElementById('sessionSaved');
+          saved.style.display = 'inline';
+          setTimeout(() => { saved.style.display = 'none'; }, 2000);
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(() => alert('Network error'));
+  });
 
   document.getElementById('refreshBtn').addEventListener('click', () => loadRequests(false));
   document.querySelectorAll('#filterBar button[data-f]').forEach(btn => {
@@ -146,7 +190,6 @@
         <div class="row"><span>Time Slot</span><span>${escapeHtml(r.timeSlot)}</span></div>
         <div class="sigs">
           <div><img src="${r.invigilatorSignature}"><p>Invigilator signature</p></div>
-          <div><img src="${r.alternateSignature}"><p>Alternate signature</p></div>
         </div>
         ${r.status === 'Pending' ? `
           <input type="text" class="remarks" placeholder="Remarks (optional)">
