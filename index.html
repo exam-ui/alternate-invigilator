@@ -30,10 +30,12 @@
                text-decoration:none; border:1px solid var(--line); border-radius:14px; padding:4px 10px;}
   .admin-link:hover{ color:var(--maroon); border-color:var(--maroon);}
   header h1{ font-size:19px; color:var(--maroon); margin:0 0 14px; font-weight:700;}
-  .brand{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:6px;}
+  .brand{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:6px;}
+  .brand img.logo{ width:52px; height:52px; object-fit:contain; flex-shrink:0;}
   .brand-text .sanstha{ color:var(--green); font-size:13px; margin:0; font-weight:600;}
   .brand-text .college{ color:var(--maroon); font-size:17px; margin:2px 0; font-weight:800;}
-  .exam-title{ font-size:13px; color:var(--ink); font-weight:700; margin:4px 0 0;}
+  .exam-title{ font-size:13px; color:var(--ink); font-weight:600; margin:8px 0 0;}
+  .exam-title .exam-label{ font-weight:800; font-size:15px; color:var(--maroon);}
   .notice{ font-size:12.5px; color:var(--maroon); background:#fff7f2; border:1px solid #f3ddd0;
            border-radius:8px; padding:10px 12px; margin:14px 18px 0; line-height:1.5;}
 
@@ -75,14 +77,15 @@
 <div class="wrap">
   <header>
     <a href="admin.html" class="admin-link">Admin</a>
-    <h1>Alternate Invigilator</h1>
     <div class="brand">
+      <img src="msbte_logo.png" class="logo" alt="MSBTE Logo">
       <div class="brand-text">
-        <p class="sanstha">Shri Shivaji Shikshan Sanstha, Amravati Sanchalit</p>
+        <p class="sanstha">Shri Shivaji Education Society's</p>
         <p class="college">Dr. Panjabrao Deshmukh Polytechnic, Amravati</p>
       </div>
+      <img src="shivaji_logo.png" class="logo" alt="Shri Shivaji Shikshan Sanstha Logo">
     </div>
-    <p class="exam-title">MSBTE Exam Summer-2026 — Alternate Invigilation Entry</p>
+    <p class="exam-title"><span class="exam-label">MSBTE Exam</span> <span id="examSession">…</span> — Alternate Invigilation Entry</p>
   </header>
 
   <p class="notice">
@@ -107,15 +110,15 @@
     <div class="field">
       <label>Time of Invigilation <span class="req">*</span></label>
       <div class="checks">
-        <label><input type="checkbox" name="slot" value="9:30 to 12:30"> 9:30 to 12:30</label>
-        <label><input type="checkbox" name="slot" value="2:00 to 5:00"> 2:00 to 5:00</label>
+        <label><input type="radio" name="slot" value="9:30 to 12:30"> 9:30 to 12:30</label>
+        <label><input type="radio" name="slot" value="2:00 to 5:00"> 2:00 to 5:00</label>
       </div>
     </div>
 
     <div class="field">
       <label>Signature of Invigilator <span class="req">*</span></label>
       <canvas id="sig1" class="sig"></canvas>
-      <div class="sig-actions"><button type="button" class="clear-link" data-target="sig1">Clear</button></div>
+      <div class="sig-actions"><button type="button" class="clear-link">Clear</button></div>
     </div>
 
     <div class="field">
@@ -124,12 +127,6 @@
         <option value="">-Select-</option>
       </select>
       <p class="hint">Name of alternate invigilator</p>
-    </div>
-
-    <div class="field">
-      <label>Signature of Alternate Invigilator <span class="req">*</span></label>
-      <canvas id="sig2" class="sig"></canvas>
-      <div class="sig-actions"><button type="button" class="clear-link" data-target="sig2">Clear</button></div>
     </div>
 
     <div class="submit-bar">
@@ -180,12 +177,17 @@
     };
   }
   const pad1 = setupSignaturePad('sig1');
-  const pad2 = setupSignaturePad('sig2');
   document.querySelectorAll('.clear-link').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      (btn.dataset.target === 'sig1' ? pad1 : pad2).clear();
-    });
+    btn.addEventListener('click', ()=>{ pad1.clear(); });
   });
+
+  // ---------- Load the admin-set exam session ----------
+  fetch(APPS_SCRIPT_URL + '?action=getConfig')
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) document.getElementById('examSession').textContent = data.examSession;
+    })
+    .catch(()=>{ document.getElementById('examSession').textContent = ''; });
 
   // ---------- Load teacher list into both dropdowns ----------
   const nameSelect = document.getElementById('invigilatorName');
@@ -218,23 +220,21 @@
     e.preventDefault();
     statusEl.className = 'status';
 
-    const slots = Array.from(document.querySelectorAll('input[name="slot"]:checked')).map(x => x.value);
+    const slotEl = document.querySelector('input[name="slot"]:checked');
     if (!nameSelect.value) return showStatus('err', 'Please select the name of invigilator.');
     if (!document.getElementById('date').value) return showStatus('err', 'Please enter the date of invigilation.');
-    if (slots.length === 0) return showStatus('err', 'Please select at least one time slot.');
+    if (!slotEl) return showStatus('err', 'Please select a time slot.');
     if (pad1.isEmpty()) return showStatus('err', 'Please sign as Invigilator.');
     if (!altSelect.value) return showStatus('err', 'Please select the alternate invigilator.');
-    if (pad2.isEmpty()) return showStatus('err', 'Please sign as Alternate Invigilator.');
     if (altSelect.value === nameSelect.value) return showStatus('err', 'Alternate invigilator must be a different person.');
 
     const payload = {
       action: 'submitRequest',
       invigilatorName: nameSelect.value,
       date: document.getElementById('date').value,
-      timeSlot: slots.join(', '),
+      timeSlot: slotEl.value,
       invigilatorSignature: pad1.dataURL(),
-      alternateName: altSelect.value,
-      alternateSignature: pad2.dataURL()
+      alternateName: altSelect.value
     };
 
     submitBtn.disabled = true;
@@ -252,7 +252,7 @@
           showStatus('ok', 'Request submitted — reference <span class="req-id">#' + data.requestId +
             '</span>. You will be notified by email once the admin approves it.');
           form.reset();
-          pad1.clear(); pad2.clear();
+          pad1.clear();
         } else {
           showStatus('err', 'Could not submit: ' + (data.error || 'unknown error'));
         }
