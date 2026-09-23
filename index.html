@@ -34,10 +34,25 @@
   .brand img.logo{ width:52px; height:52px; object-fit:contain; flex-shrink:0;}
   .brand-text .sanstha{ color:var(--green); font-size:13px; margin:0; font-weight:600;}
   .brand-text .college{ color:var(--maroon); font-size:17px; margin:2px 0; font-weight:800;}
-  .exam-title{ font-size:13px; color:var(--ink); font-weight:600; margin:8px 0 0;}
-  .exam-title .exam-label{ font-weight:800; font-size:15px; color:var(--maroon);}
+  .exam-line{ font-size:15px; font-weight:800; color:var(--maroon); margin:8px 0 0;}
+  .exam-subline{ font-size:13px; font-weight:600; color:var(--ink); margin:6px 0 0;}
   .notice{ font-size:12.5px; color:var(--maroon); background:#fff7f2; border:1px solid #f3ddd0;
            border-radius:8px; padding:10px 12px; margin:14px 18px 0; line-height:1.5;}
+
+  .link-buttons{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:14px 0 0;}
+  .link-btn{
+    flex:1; min-width:150px; text-decoration:none; text-align:center;
+    padding:12px 14px; border-radius:10px; font-size:13.5px; font-weight:700;
+    color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.12); transition:transform 0.15s, box-shadow 0.15s;
+  }
+  .link-btn:hover{ transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,0.16);}
+  .link-btn .icon{ margin-right:6px;}
+  .link-btn.order{ background:linear-gradient(135deg, var(--maroon), #7c1c2d);}
+  .link-btn.chart{ background:linear-gradient(135deg, var(--green), #0f4a1d);}
+  .link-btn.disabled{
+    background:#e5e7eb !important; color:#9aa1ac; cursor:not-allowed; box-shadow:none;
+  }
+  .link-btn.disabled:hover{ transform:none; box-shadow:none;}
 
   form{padding:6px 18px 40px;}
   .field{ padding:18px 0; border-bottom:1px solid var(--line);}
@@ -85,7 +100,18 @@
       </div>
       <img src="shivaji_logo.png" class="logo" alt="Shri Shivaji Shikshan Sanstha Logo">
     </div>
-    <p class="exam-title"><span class="exam-label">MSBTE Exam</span> <span id="examSession">…</span> — Alternate Invigilation Entry</p>
+    <p class="exam-line">MSBTE Exam <span id="examSession">…</span></p>
+
+    <div class="link-buttons">
+      <a id="orderBtn" class="link-btn order disabled" href="#" target="_blank" rel="noopener">
+        <span class="icon">📄</span>Invigilators Order
+      </a>
+      <a id="chartBtn" class="link-btn chart disabled" href="#" target="_blank" rel="noopener">
+        <span class="icon">📊</span>Invigilation Chart
+      </a>
+    </div>
+
+    <p class="exam-subline">Alternate Invigilation Entry</p>
   </header>
 
   <p class="notice">
@@ -181,19 +207,37 @@
     btn.addEventListener('click', ()=>{ pad1.clear(); });
   });
 
-  // ---------- Load the admin-set exam session ----------
-  fetch(APPS_SCRIPT_URL + '?action=getConfig')
+  // ---------- Load the admin-set exam session and quick-link buttons ----------
+  fetch(APPS_SCRIPT_URL + '?action=getConfig&_=' + Date.now(), { cache: 'no-store' })
     .then(r => r.json())
     .then(data => {
-      if (data.ok) document.getElementById('examSession').textContent = data.examSession;
+      if (!data.ok) return;
+      document.getElementById('examSession').textContent = data.examSession;
+      setupLinkButton('orderBtn', data.invigilatorsOrderLink);
+      setupLinkButton('chartBtn', data.invigilationChartLink);
     })
     .catch(()=>{ document.getElementById('examSession').textContent = ''; });
+
+  function setupLinkButton(id, url){
+    const btn = document.getElementById(id);
+    if (url) {
+      btn.href = url;
+      btn.classList.remove('disabled');
+    } else {
+      btn.href = '#';
+      btn.classList.add('disabled');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        alert('This link has not been added by the admin yet.');
+      });
+    }
+  }
 
   // ---------- Load teacher list into both dropdowns ----------
   const nameSelect = document.getElementById('invigilatorName');
   const altSelect = document.getElementById('alternateName');
 
-  fetch(APPS_SCRIPT_URL + '?action=getTeachers')
+  fetch(APPS_SCRIPT_URL + '?action=getTeachers&_=' + Date.now(), { cache: 'no-store' })
     .then(r => r.json())
     .then(data => {
       if (!data.ok) return;
