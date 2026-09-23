@@ -24,9 +24,10 @@
                    font-size:13px; cursor:pointer; color:var(--ink);}
   .toolbar button.active{ background:var(--maroon); color:#fff; border-color:var(--maroon);}
 
-  .settings{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:16px;
-             display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-  .settings label{ font-size:13px; font-weight:700; color:var(--maroon);}
+  .settings{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:16px;}
+  .settings-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;}
+  .settings-row:last-child{ margin-bottom:0;}
+  .settings label{ font-size:13px; font-weight:700; color:var(--maroon); min-width:170px;}
   .settings input{ padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:13.5px; flex:1; min-width:140px;}
   .settings button{ padding:8px 14px; border:none; border-radius:8px; background:var(--maroon); color:#fff;
                      font-weight:700; cursor:pointer; font-size:13px;}
@@ -65,10 +66,22 @@
 
   <div id="dashboard" style="display:none;">
     <div class="settings">
-      <label for="examSessionInput">MSBTE Exam Session</label>
-      <input type="text" id="examSessionInput" placeholder="e.g. Summer-2026">
-      <button id="saveSessionBtn">Save</button>
-      <span class="saved" id="sessionSaved">Saved ✓</span>
+      <div class="settings-row">
+        <label for="examSessionInput">MSBTE Exam Session</label>
+        <input type="text" id="examSessionInput" placeholder="e.g. Summer-2026">
+      </div>
+      <div class="settings-row">
+        <label for="orderLinkInput">Invigilators Order Link</label>
+        <input type="text" id="orderLinkInput" placeholder="https://...">
+      </div>
+      <div class="settings-row">
+        <label for="chartLinkInput">Invigilation Chart Link</label>
+        <input type="text" id="chartLinkInput" placeholder="https://...">
+      </div>
+      <div class="settings-row" style="justify-content:flex-end;">
+        <button id="saveSessionBtn">Save Settings</button>
+        <span class="saved" id="sessionSaved">Saved ✓</span>
+      </div>
     </div>
     <div class="toolbar" id="filterBar">
       <button data-f="Pending" class="active">Pending</button>
@@ -116,7 +129,7 @@
   });
 
   function loadRequests(isLogin){
-    fetch(APPS_SCRIPT_URL + '?action=getRequests&password=' + encodeURIComponent(adminPassword))
+    fetch(APPS_SCRIPT_URL + '?action=getRequests&password=' + encodeURIComponent(adminPassword) + '&_=' + Date.now(), { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         if (!data.ok) {
@@ -136,20 +149,29 @@
   }
 
   function loadExamSession(){
-    fetch(APPS_SCRIPT_URL + '?action=getConfig')
+    fetch(APPS_SCRIPT_URL + '?action=getConfig&_=' + Date.now(), { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
-        if (data.ok) document.getElementById('examSessionInput').value = data.examSession;
+        if (data.ok) {
+          document.getElementById('examSessionInput').value = data.examSession;
+          document.getElementById('orderLinkInput').value = data.invigilatorsOrderLink || '';
+          document.getElementById('chartLinkInput').value = data.invigilationChartLink || '';
+        }
       })
       .catch(() => {});
   }
 
   document.getElementById('saveSessionBtn').addEventListener('click', () => {
     const examSession = document.getElementById('examSessionInput').value.trim();
-    if (!examSession) return;
+    const invigilatorsOrderLink = document.getElementById('orderLinkInput').value.trim();
+    const invigilationChartLink = document.getElementById('chartLinkInput').value.trim();
+    if (!examSession) return alert('Exam session cannot be empty.');
     fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'setExamSession', examSession, password: adminPassword })
+      body: JSON.stringify({
+        action: 'saveSettings', examSession, invigilatorsOrderLink, invigilationChartLink,
+        password: adminPassword
+      })
     })
       .then(r => r.json())
       .then(data => {
